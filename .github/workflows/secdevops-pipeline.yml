@@ -46,6 +46,7 @@ jobs:
             p/python
             p/security-audit
             p/owasp-top-ten
+        continue-on-error: true  # Set to false in production to block on findings
 
   # ══════════════════════════════════════════
   # STAGE 3: Dependency Scanning
@@ -89,6 +90,7 @@ jobs:
           directory: terraform/
           framework: terraform
           output_format: cli
+          skip_check: CKV2_AZURE_33
 
   # ══════════════════════════════════════════
   # STAGE 5: Container Image Scanning

@@ -12,6 +12,7 @@ resource "azurerm_storage_account" "demo" {
 
   # CKV_AZURE_59: Disable public access
   allow_nested_items_to_be_public = false
+  public_network_access_enabled = false
 
   # CKV_AZURE_44: Enforce latest TLS
   min_tls_version = "TLS1_2"
