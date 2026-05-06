@@ -96,7 +96,7 @@ jobs:
   # STAGE 5: Container Image Scanning
   # ══════════════════════════════════════════
   container-scan:
-    name: 🐳 Container Image Scan
+    name: Container Image Scan
     runs-on: ubuntu-latest
     needs: [sast, dependency-scan, iac-scan]
     steps:
@@ -118,14 +118,14 @@ jobs:
   # STAGE 6: Security Gate Summary
   # ══════════════════════════════════════════
   security-gate:
-    name: ✅ Security Gate
+    name: Security Gate
     runs-on: ubuntu-latest
     needs: [secret-scanning, sast, dependency-scan, iac-scan, container-scan]
     steps:
       - name: Security gate passed
         run: |
           echo "════════════════════════════════════"
-          echo "  ✅ All security stages completed"
+          echo "  All security stages completed"
           echo "  Pipeline: ${{ github.workflow }}"
           echo "  Commit:   ${{ github.sha }}"
           echo "  Branch:   ${{ github.ref_name }}"
