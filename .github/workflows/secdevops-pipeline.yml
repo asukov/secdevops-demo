@@ -1,0 +1,131 @@
+name: SecDevOps Security Pipeline
+
+# Trigger on every push and pull request
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  # ══════════════════════════════════════════
+  # STAGE 1: Secret Scanning
+  # ══════════════════════════════════════════
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ══════════════════════════════════════════
+  # STAGE 2: SAST - Static Code Analysis
+  # ══════════════════════════════════════════
+  sast:
+    name: SAST - Static Analysis
+    runs-on: ubuntu-latest
+    needs: secret-scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/security-audit
+            p/owasp-top-ten
+        continue-on-error: true  # Don't block for demo, remove in production
+
+  # ══════════════════════════════════════════
+  # STAGE 3: Dependency Scanning
+  # ══════════════════════════════════════════
+  dependency-scan:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    needs: secret-scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Safety
+        run: pip install safety
+
+      - name: Run Safety dependency scan
+        run: |
+          safety check \
+            -r app/requirements.txt \
+            --output text \
+            || true  # Continue on findings for demo
+
+  # ══════════════════════════════════════════
+  # STAGE 4: IaC Security Scanning
+  # ══════════════════════════════════════════
+  iac-scan:
+    name: IaC Security Scan
+    runs-on: ubuntu-latest
+    needs: secret-scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Checkov IaC scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: cli
+          soft_fail: true  # Don't block pipeline for demo
+
+  # ══════════════════════════════════════════
+  # STAGE 5: Container Image Scanning
+  # ══════════════════════════════════════════
+  container-scan:
+    name: 🐳 Container Image Scan
+    runs-on: ubuntu-latest
+    needs: [sast, dependency-scan, iac-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t secdevops-demo:${{ github.sha }} .
+
+      - name: Run Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: secdevops-demo:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0  # Set to 1 in production to block on findings
+
+  # ══════════════════════════════════════════
+  # STAGE 6: Security Gate Summary
+  # ══════════════════════════════════════════
+  security-gate:
+    name: ✅ Security Gate
+    runs-on: ubuntu-latest
+    needs: [secret-scanning, sast, dependency-scan, iac-scan, container-scan]
+    steps:
+      - name: Security gate passed
+        run: |
+          echo "════════════════════════════════════"
+          echo "  ✅ All security stages completed"
+          echo "  Pipeline: ${{ github.workflow }}"
+          echo "  Commit:   ${{ github.sha }}"
+          echo "  Branch:   ${{ github.ref_name }}"
+          echo "════════════════════════════════════"
