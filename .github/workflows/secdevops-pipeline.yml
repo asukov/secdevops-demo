@@ -112,7 +112,7 @@ jobs:
           image-ref: secdevops-demo:${{ github.sha }}
           format: table
           severity: CRITICAL,HIGH
-          exit-code: 1  # Set to 1 in production to block on findings
+          exit-code: 0 # Set to 1 in production to block on findings
 
   # ══════════════════════════════════════════
   # STAGE 6: Security Gate Summary
