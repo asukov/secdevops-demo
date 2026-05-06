@@ -15,17 +15,16 @@ jobs:
   secret-scanning:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Full history for secret scanning
-          node-version: '24'
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        with:
-          node-version: '24'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
